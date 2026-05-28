@@ -20,6 +20,8 @@ namespace ncore
     bool vector_setup(vector_t* vector, u32 item_size, u32 num_items_reserved, u32 num_items_committed = 0);
     void vector_destroy(vector_t* vector);
 
+    u32  vector_get_size(vector_t* vector) { return vector->m_count; }
+
     bool vector_set_capacity(vector_t* vector, u32 new_capacity); // unit = number of items
     u32  vector_get_capacity(vector_t* vector);
 

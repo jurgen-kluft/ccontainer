@@ -15,30 +15,33 @@ UNITTEST_SUITE_BEGIN(vector_t)
 
 		UNITTEST_TEST(create_destroy)
 		{
-			vector_t<s32> darray(128, 512);
+			vector_t v;
+			vector_setup(&v, sizeof(u32), 128, 512);
 		}
 
 		UNITTEST_TEST(create_use_destroy)
 		{
-			vector_t<s32> darray( 512, 512);
-			CHECK_EQUAL(512, darray.capacity());
+			vector_t darray;
+			vector_setup(&darray, sizeof(u32), 512, 512);
+			CHECK_EQUAL(512, vector_get_capacity(&darray));
 			for (s32 i = 0; i < 512; i++)
-				darray.add_item(i);
-			CHECK_EQUAL(512, darray.size());
+				push_item(&darray, (byte*)&i);
+			CHECK_EQUAL(512, vector_get_size(&darray));
 		}
 
 		UNITTEST_TEST(create_setcap_use_destroy)
 		{
-			vector_t<s32> darray( 512, 512);
-			CHECK_EQUAL(512, darray.capacity());
+			vector_t darray;
+			vector_setup(&darray, sizeof(u32), 512, 512);
+			CHECK_EQUAL(512, vector_get_capacity(&darray));
 
-			darray.set_capacity(1024);
-			CHECK_EQUAL(1024, darray.capacity());
-			CHECK_EQUAL(0, darray.size());
+			vector_set_capacity(&darray, 1024);
+			CHECK_EQUAL(1024, vector_get_capacity(&darray));
+			CHECK_EQUAL(0, vector_get_size(&darray));
 
 			for (s32 i = 0; i < 1024; i++)
-				darray.add_item(i);
-			CHECK_EQUAL(1024, darray.size());
+				push_item(&darray, (byte*)&i);
+			CHECK_EQUAL(1024, vector_get_size(&darray));
 		}
 	}
 }
