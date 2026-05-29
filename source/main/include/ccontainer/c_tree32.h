@@ -7,14 +7,13 @@
 
 namespace ncore
 {
+    struct arena_t;
+
     // binary balanced search tree implemented using the red-black tree algorithm
     namespace ntree32
     {
         typedef u32 index_t;
         typedef u32 node_t;
-
-        const u32    c_invalid_index = 0xFFFFFFFF;
-        const node_t c_invalid_node  = 0xFFFFFFFF;
 
         enum echild_t
         {
@@ -28,67 +27,64 @@ namespace ncore
             BLACK = RIGHT
         };
 
+        const u32    c_invalid_index = 0xFFFFFFFF;
+        const node_t c_invalid_node  = 0xFFFFFFFF;
+
         // a and b are the indices of nodes/items to compare, user_data is a pointer to the data that is passed to the tree
         typedef s8 (*compare_fn)(u32 a, u32 b, void const* user_data);
+
+        struct tree_t
+        {
+            arena_t* m_nodes;
+            u32      m_count;
+            u32      m_free_head;
+        };
 
         struct nnode_t
         {
             node_t m_child[2];
         };
 
-        struct tree_t
-        {
-            void   reset();
-            void   set_color(node_t node, u8 color);
-            u8     get_color(node_t const node) const;
-            node_t get_node(node_t const node, s8 ne) const;
-            void   set_node(node_t node, s8 ne, node_t set);
-            node_t new_node();
-            void   del_node(node_t node);
-
-            static inline s8 getdir(s8 compare) { return (compare + 1) >> 1; }
-
-            nnode_t* m_nodes;
-            u32      m_free_index;
-            u32      m_free_head;
-        };
-
-        void g_init(tree_t& tree);
+        void      tree_reset(tree_t* tree);
+        inline s8 tree_getdir(s8 compare) { return (compare + 1) >> 1; }
+        void      tree_set_color(tree_t* tree, node_t node, u8 color);
+        u8        tree_get_color(tree_t const* tree, node_t const node);
+        node_t    tree_get_node(tree_t const* tree, node_t const node, s8 ne);
+        void      tree_set_node(tree_t* tree, node_t node, s8 ne, node_t set);
+        node_t    tree_new_node(tree_t* tree);
+        void      tree_del_node(tree_t* tree, node_t node);
 
         struct iterator_t
         {
-            iterator_t(tree_t& tree, node_t root)
-                : m_root(root)
-                , m_it(c_invalid_node)
-                , m_stack(0)
-            {
-            }
-
-            bool traverse(tree_t& tree, s32 d, node_t& node);
-            bool preorder(tree_t& tree, s32 d, node_t& node);
-            bool sortorder(tree_t& tree, s32 d, node_t& node);
-            bool postorder(tree_t& tree, s32 d, node_t& node);
-
-            node_t m_root;
-            node_t m_it;
-            node_t m_stack_array[32];
-            s32    m_stack;
+            tree_t* m_tree;
+            node_t  m_root;
+            node_t  m_it;
+            node_t  m_stack_array[32];
+            s32     m_stack;
         };
 
-        void setup_tree(tree_t& c, nnode_t* nodes);
-        void teardown_tree(tree_t& c);
+        void iterator_setup(iterator_t* iter, tree_t* tree, node_t root);
+        bool iterator_traverse(iterator_t* iter, s32 d, node_t& node);
+        bool iterator_preorder(iterator_t* iter, s32 d, node_t& node);
+        bool iterator_sortorder(iterator_t* iter, s32 d, node_t& node);
+        bool iterator_postorder(iterator_t* iter, s32 d, node_t& node);
 
-        bool       clear(tree_t& c, node_t& root, node_t& n);  // Repeatedly call 'clear' until true is returned
-        bool       find(tree_t const& c, node_t root, index_t key, compare_fn comparer, void const* user_data, node_t& found);
-        bool       insert(tree_t& c, node_t& root, node_t temp, index_t key, compare_fn comparer, void const* user_data, node_t& inserted_or_found);
-        bool       remove(tree_t& c, node_t& root, node_t temp, index_t key, compare_fn comparer, void const* user_data, node_t& removed);
-        bool       validate(tree_t& c, node_t root, const char*& error_str, compare_fn comparer, void const* user_data);
-        iterator_t iterate(tree_t& c, node_t root);
+        void tree_setup(tree_t* tree, u32 max_nodes);
+        void tree_teardown(tree_t* tree);
+
+        u32  tree_get_capacity(tree_t const* tree);
+        void tree_ensure_capacity(tree_t* tree, u32 capacity);
+        u32  tree_get_used_capacity(tree_t const* tree);
+
+        bool tree_clear(tree_t* tree, node_t& root, node_t& n);  // Repeatedly call 'clear' until true is returned
+        bool tree_find(tree_t const* tree, node_t root, index_t key, compare_fn comparer, void const* user_data, node_t& found);
+        bool tree_insert(tree_t* tree, node_t& root, node_t temp, index_t key, compare_fn comparer, void const* user_data, node_t& inserted_or_found);
+        bool tree_remove(tree_t* tree, node_t& root, node_t temp, index_t key, compare_fn comparer, void const* user_data, node_t& removed);
+        bool tree_validate(tree_t const* tree, node_t root, const char*& error_str, compare_fn comparer, void const* user_data);
+        void tree_iterate(iterator_t* iter, tree_t* tree, node_t root);
 
     }  // namespace ntree32
 
 }  // namespace ncore
-
-#include "ccontainer/private/c_tree32_internal.h"
 
 #endif

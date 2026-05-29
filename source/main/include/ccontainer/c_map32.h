@@ -6,6 +6,7 @@
 #endif
 
 #include "ccontainer/c_tree32.h"
+#include "ccontainer/c_vector.h"
 
 namespace ncore
 {
@@ -20,198 +21,50 @@ namespace ncore
     // can find the key/value and the node index.
     // -----------------------------------------------------------------------------------
 
-    template <typename K, typename V>
-    class map32_t
+    typedef s8 (*map32_compare_t)(u32 _key, u32 _item, void const* user_data);
+
+    struct map32_t
     {
-        struct data_t
-        {
-            data_t(alloc_t* a, u32 capacity)
-                : m_allocator(a)
-                , m_tree()
-                , m_root(ntree32::c_invalid_node)
-                , m_capacity(capacity)
-                , m_nodes(nullptr)
-                , m_keys(nullptr)
-                , m_values(nullptr)
-            {
-            }
-            alloc_t*          m_allocator;
-            ntree32::tree_t   m_tree;
-            ntree32::node_t   m_root;
-            u32               m_capacity;
-            ntree32::nnode_t* m_nodes;
-            K*                m_keys;
-            V*                m_values;
-
-            inline u32 find_slot() const { return m_capacity; }
-            inline u32 temp_slot() const { return m_capacity + 1; }
-        };
-
-        data_t m_data;
-
-        static s8 s_compare(u32 _key, u32 _item, void const* user_data)
-        {
-            data_t* data = (data_t*)user_data;
-            K&      key  = data->m_keys[_key];
-            K&      item = data->m_keys[_item];
-            if (key < item)
-                return -1;
-            else if (key > item)
-                return 1;
-            return 0;
-        }
-
-    public:
-        inline map32_t(alloc_t* a, u32 capacity = 65535 - 2)
-            : m_data(a, capacity)
-        {
-            m_data.m_nodes  = g_allocate_array<ntree32::nnode_t>(m_data.m_allocator, capacity + 2);
-            m_data.m_keys   = g_allocate_array<K>(m_data.m_allocator, capacity + 2);
-            m_data.m_values = g_allocate_array<V>(m_data.m_allocator, capacity + 2);
-            ntree32::setup_tree(m_data.m_tree, m_data.m_nodes);
-        }
-
-        inline ~map32_t()
-        {
-            ntree32::node_t n;
-            while (!ntree32::clear(m_data.m_tree, m_data.m_root, n))
-            {
-                m_data.m_tree.del_node(n);
-            }
-            ntree32::teardown_tree(m_data.m_tree);
-            g_deallocate_array(m_data.m_allocator, m_data.m_keys);
-            g_deallocate_array(m_data.m_allocator, m_data.m_values);
-            g_deallocate_array(m_data.m_allocator, m_data.m_nodes);
-        }
-
-        bool insert(K const& _key, V const& _value)
-        {
-            m_data.m_keys[m_data.find_slot()] = _key;
-            ntree32::node_t inserted;
-            if (ntree32::insert(m_data.m_tree, m_data.m_root, m_data.temp_slot(), m_data.find_slot(), s_compare, &m_data, inserted))
-            {
-                m_data.m_keys[inserted]   = _key;
-                m_data.m_values[inserted] = _value;
-                return true;
-            }
-            return false;
-        }
-
-        bool remove(K const& key)
-        {
-            m_data.m_keys[m_data.find_slot()] = key;
-            ntree32::node_t removed;
-            if (ntree32::remove(m_data.m_tree, m_data.m_root, m_data.temp_slot(), m_data.find_slot(), s_compare, &m_data, removed))
-            {
-                m_data.m_tree.del_node(removed);
-                return true;
-            }
-            return false;
-        }
-
-        bool find(K const& _key, V& _value) const
-        {
-            m_data.m_keys[m_data.find_slot()] = _key;
-            ntree32::node_t found;
-            if (ntree32::find(m_data.m_tree, m_data.m_root, m_data.find_slot(), s_compare, &m_data, found))
-            {
-                _value = m_data.m_values[found];
-                return true;
-            }
-            return false;
-        }
+        ntree32::tree_t m_tree;
+        ntree32::node_t m_root;
+        map32_compare_t m_comparer;
+        vector_t        m_keys;
+        vector_t        m_values;
     };
+
+    void map32_setup(map32_t* c, u32 capacity, u32 sizeof_key, u32 sizeof_value);
+    void map32_setup(map32_t* c, u32 capacity, u32 sizeof_key, u32 sizeof_value, map32_compare_t comparer);
+    void map32_teardown(map32_t* c);
+    bool map32_insert(map32_t* c, byte const* key, byte const* value);
+    bool map32_remove(map32_t* c, byte const* key);
+    bool map32_find(map32_t* c, byte const* key, byte* value);
+
+    template <typename K, typename V>
+    void map32_setup(map32_t* c, u32 capacity)
+    { map32_setup(c, capacity, sizeof(K), sizeof(V)); }
+
+    template <typename K, typename V>
+    bool map32_insert(map32_t* c, K const& key, V const& value)
+    {
+        ASSERT(sizeof(K) == c->m_keys.m_sizeof);
+        ASSERT(sizeof(V) == c->m_values.m_sizeof);
+        return map32_insert(c, (byte const*)&key, (byte const*)&value);
+    }
 
     template <typename K>
-    class set32_t
+    bool map32_remove(map32_t* c, K const& key)
     {
-        struct data_t
-        {
-            data_t(alloc_t* a, u32 capacity)
-                : m_allocator(a)
-                , m_tree()
-                , m_root(ntree32::c_invalid_node)
-                , m_capacity(capacity)
-                , m_nodes(nullptr)
-                , m_keys(nullptr)
-            {
-            }
-            alloc_t*          m_allocator;
-            ntree32::tree_t   m_tree;
-            ntree32::node_t   m_root;
-            u32               m_capacity;
-            ntree32::nnode_t* m_nodes;
-            K*                m_keys;
+        ASSERT(sizeof(K) == c->m_keys.m_sizeof);
+        return map32_remove(c, (byte const*)&key);
+    }
 
-            inline u32 find_slot() const { return m_capacity; }
-            inline u32 temp_slot() const { return m_capacity + 1; }
-        };
-        data_t m_data;
-
-        static s8 s_compare(u32 _key, u32 _item, void const* user_data)
-        {
-            data_t* data = (data_t*)user_data;
-            K&      key  = data->m_keys[_key];
-            K&      item = data->m_keys[_item];
-            if (key < item)
-                return -1;
-            else if (key > item)
-                return 1;
-            return 0;
-        }
-
-    public:
-        inline set32_t(alloc_t* a, u32 capacity = 65535 - 2)
-            : m_data(a, capacity)
-        {
-            m_data.m_nodes = g_allocate_array<ntree32::nnode_t>(m_data.m_allocator, capacity + 2);
-            m_data.m_keys  = g_allocate_array<K>(m_data.m_allocator, capacity + 2);
-            ntree32::setup_tree(m_data.m_tree, m_data.m_nodes);
-        }
-
-        ~set32_t()
-        {
-            ntree32::node_t n;
-            while (!ntree32::clear(m_data.m_tree, m_data.m_root, n))
-            {
-                m_data.m_tree.del_node(n);
-            }
-            ntree32::teardown_tree(m_data.m_tree);
-            g_deallocate_array(m_data.m_allocator, m_data.m_keys);
-            g_deallocate_array(m_data.m_allocator, m_data.m_nodes);
-        }
-
-        bool insert(K const& _key)
-        {
-            m_data.m_keys[m_data.find_slot()] = _key;
-            ntree32::node_t inserted;
-            if (ntree32::insert(m_data.m_tree, m_data.m_root, m_data.temp_slot(), m_data.find_slot(), s_compare, &m_data, inserted))
-            {
-                m_data.m_keys[inserted] = _key;
-                return true;
-            }
-            return false;
-        }
-
-        bool contains(K const& key) const
-        {
-            m_data.m_keys[m_data.find_slot()] = key;
-            ntree32::node_t found             = ntree32::c_invalid_node;
-            return ntree32::find(m_data.m_tree, m_data.m_root, m_data.find_slot(), s_compare, &m_data, found);
-        }
-
-        bool remove(K const& key)
-        {
-            m_data.m_keys[m_data.find_slot()] = key;
-            ntree32::node_t removed;
-            if (ntree32::remove(m_data.m_tree, m_data.m_root, m_data.temp_slot(), m_data.find_slot(), s_compare, &m_data, removed))
-            {
-                m_data.m_tree.del_node(removed);
-                return true;
-            }
-            return false;
-        }
-    };
+    template <typename K, typename V>
+    bool map32_find(map32_t* c, K const& key, V& value)
+    {
+        ASSERT(sizeof(K) == c->m_keys.m_sizeof);
+        ASSERT(sizeof(V) == c->m_values.m_sizeof);
+        return map32_find(c, (byte const*)&key, (byte*)&value);
+    }
 
 };  // namespace ncore
 
