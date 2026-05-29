@@ -1,9 +1,8 @@
 # ccontainer
 
-Cross platform container library
+Cross platform library, containers
 
 - ccontainer (depends on [ccore](https://github.com/jurgen-kluft/ccore))
-  - map
-  - slice
-  - tree
-  - vector
+  - map (uses tree and vector)
+  - tree (uses arena)
+  - vector (uses arena)
