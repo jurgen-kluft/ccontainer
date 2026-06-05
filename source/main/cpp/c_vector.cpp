@@ -30,6 +30,8 @@ namespace ncore
         if (new_size > vector->m_capacity)
             return;  // new size is too large
         vector->m_count = new_size;
+
+        // TODO we need to set 'pos' in the arena to the new size
     }
 
     bool vector_ensure_capacity(vector_t* vector, u32 new_capacity)
@@ -37,18 +39,20 @@ namespace ncore
         if (new_capacity == 0 || new_capacity > narena::reserved_size(vector->m_arena) / vector->m_sizeof)
             return false;  // new capacity is too large
 
+        // TODO if we are setting a capacity that is < size then we need to handle this
+
         vector->m_capacity = new_capacity;
         return narena::commit(vector->m_arena, (int_t)new_capacity * vector->m_sizeof);
     }
 
-    void push_item(vector_t* vector, byte const* item)
+    void vector_push(vector_t* vector, byte const* item)
     {
         byte* dst = (byte*)narena::alloc(vector->m_arena, vector->m_sizeof);
         g_memcpy(dst, item, vector->m_sizeof);
         vector->m_count += 1;
     }
 
-    void insert_item(vector_t* vector, u32 index, byte const* item)
+    void vector_insert(vector_t* vector, u32 index, byte const* item)
     {
         // insert does need to alloc a new slot
         narena::alloc(vector->m_arena, vector->m_sizeof);
@@ -72,7 +76,7 @@ namespace ncore
         vector->m_count += 1;
     }
 
-    bool set_item(vector_t* vector, u32 index, const byte* item)
+    bool vector_set(vector_t* vector, u32 index, const byte* item)
     {
         if (index >= vector->m_count)
             return false;  // index out of bounds
@@ -82,7 +86,7 @@ namespace ncore
         return true;
     }
 
-    bool pop_item(vector_t* vector, byte* out_item)
+    bool vector_pop(vector_t* vector, byte* out_item)
     {
         if (vector->m_count == 0)
             return false;  // no items to pop
@@ -93,7 +97,7 @@ namespace ncore
         return true;
     }
 
-    void remove_item(vector_t* vector, u32 index)
+    void vector_remove(vector_t* vector, u32 index)
     {
         if (index >= vector->m_count)
             return;  // index out of bounds
@@ -114,7 +118,7 @@ namespace ncore
         vector->m_count -= 1;
     }
 
-    void remove_item_swap(vector_t* vector, u32 index)
+    void vector_remove_swap(vector_t* vector, u32 index)
     {
         if (index >= vector->m_count)
             return;  // index out of bounds
@@ -133,35 +137,63 @@ namespace ncore
         vector->m_count -= 1;
     }
 
-    byte* get_item_ptr(vector_t* vector, u32 index)
-    {
-        if (index >= vector->m_count)
-            return nullptr;
-        return (byte*)narena::base_ptr(vector->m_arena) + (index * vector->m_sizeof);
-    }
-
-    byte const* get_item_ptr(vector_t const* vector, u32 index)
-    {
-        if (index >= vector->m_count)
-            return nullptr;
-        return (byte const*)narena::base_ptr(vector->m_arena) + (index * vector->m_sizeof);
-    }
-
-    byte* get_items_ptr(vector_t* vector)
+    byte*       vector_begin_ptr(vector_t* vector)
     {
         if (vector->m_count == 0)
             return nullptr;
         return (byte*)narena::base_ptr(vector->m_arena);
     }
+    
+    byte*       vector_end_ptr(vector_t* vector)
+    {
+        if (vector->m_count == 0)
+            return nullptr;
+        return (byte*)narena::base_ptr(vector->m_arena) + (vector->m_count * vector->m_sizeof);
+    }
 
-    byte const* get_items_ptr(vector_t const* vector)
+    byte const* vector_begin_ptr(vector_t const* vector)
     {
         if (vector->m_count == 0)
             return nullptr;
         return (byte const*)narena::base_ptr(vector->m_arena);
     }
 
-    s32 compare_items(vector_t const* vector, u32 lhs_index, u32 rhs_index)
+    byte const* vector_end_ptr(vector_t const* vector)
+    {
+        if (vector->m_count == 0)
+            return nullptr;
+        return (byte const*)narena::base_ptr(vector->m_arena) + (vector->m_count * vector->m_sizeof);
+    }
+
+    byte* vector_item_ptr(vector_t* vector, u32 index)
+    {
+        if (index >= vector->m_count)
+            return nullptr;
+        return (byte*)narena::base_ptr(vector->m_arena) + (index * vector->m_sizeof);
+    }
+
+    byte const* vector_item_ptr(vector_t const* vector, u32 index)
+    {
+        if (index >= vector->m_count)
+            return nullptr;
+        return (byte const*)narena::base_ptr(vector->m_arena) + (index * vector->m_sizeof);
+    }
+
+    byte* vector_items_ptr(vector_t* vector)
+    {
+        if (vector->m_count == 0)
+            return nullptr;
+        return (byte*)narena::base_ptr(vector->m_arena);
+    }
+
+    byte const* vector_items_ptr(vector_t const* vector)
+    {
+        if (vector->m_count == 0)
+            return nullptr;
+        return (byte const*)narena::base_ptr(vector->m_arena);
+    }
+
+    s32 vector_compare_items(vector_t const* vector, u32 lhs_index, u32 rhs_index)
     {
         if (lhs_index >= vector->m_count || rhs_index >= vector->m_count)
             return 0;
