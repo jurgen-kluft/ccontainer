@@ -117,6 +117,45 @@ UNITTEST_SUITE_BEGIN(tree32)
             ntree32::tree_teardown(&tree);
         }
 
+        UNITTEST_TEST(tree_capacity_reset_and_iterator_setup)
+        {
+            ntree32::tree_t tree;
+            ntree32::tree_setup(&tree, c_max_nodes);
+
+            CHECK_EQUAL((u32)0, ntree32::tree_get_capacity(&tree));
+            CHECK_EQUAL((u32)0, ntree32::tree_get_used_capacity(&tree));
+
+            ntree32::tree_ensure_capacity(&tree, 4);
+            CHECK_GE(ntree32::tree_get_capacity(&tree),(u32)4);
+
+            ntree32::node_t root = ntree32::tree_new_node(&tree);
+            ntree32::node_t left = ntree32::tree_new_node(&tree);
+            ntree32::tree_set_node(&tree, root, ntree32::LEFT, left);
+            CHECK_EQUAL((u32)2, ntree32::tree_get_used_capacity(&tree));
+            CHECK_EQUAL((u32)2, tree.m_count);
+
+            ntree32::iterator_t iterator;
+            ntree32::iterator_setup(&iterator, &tree, root);
+
+            ntree32::node_t node = ntree32::c_invalid_node;
+            CHECK_TRUE(ntree32::iterator_traverse(&iterator, ntree32::LEFT, node));
+            CHECK_EQUAL(root, node);
+            CHECK_TRUE(ntree32::iterator_traverse(&iterator, ntree32::LEFT, node));
+            CHECK_EQUAL(left, node);
+            CHECK_FALSE(ntree32::iterator_traverse(&iterator, ntree32::LEFT, node));
+
+            ntree32::tree_reset(&tree);
+            CHECK_EQUAL((u32)0, ntree32::tree_get_used_capacity(&tree));
+            CHECK_EQUAL((u32)0, tree.m_count);
+            CHECK_EQUAL(ntree32::c_invalid_node, tree.m_free_head);
+
+            ntree32::node_t recycled = ntree32::tree_new_node(&tree);
+            CHECK_EQUAL((ntree32::node_t)0, recycled);
+            ntree32::tree_del_node(&tree, recycled);
+
+            ntree32::tree_teardown(&tree);
+        }
+
         UNITTEST_TEST(insert_remove)
         {
             ntree32::node_t root = ntree32::c_invalid_node;
@@ -141,6 +180,37 @@ UNITTEST_SUITE_BEGIN(tree32)
 
             ntree32::node_t node;
             while (!ntree32::tree_clear(&tree, root, node)) {}
+
+            ntree32::tree_teardown(&tree);
+        }
+
+        UNITTEST_TEST(tree_clear_reports_removed_nodes)
+        {
+            ntree32::node_t root = ntree32::c_invalid_node;
+            ntree32::tree_t tree;
+            ntree32::tree_setup(&tree, c_max_nodes);
+            s_init_keys();
+
+            for (s32 i = 0; i < 4; ++i)
+            {
+                s_keys[c_find_slot] = s_find[i];
+                ntree32::node_t inserted;
+                CHECK_TRUE(ntree32::tree_insert(&tree, root, c_temp_slot, c_find_slot, s_compare_key_and_node, &s_keys, inserted));
+                s_keys[inserted] = s_find[i];
+            }
+
+            s32 cleared = 0;
+            ntree32::node_t node = ntree32::c_invalid_node;
+            while (!ntree32::tree_clear(&tree, root, node))
+            {
+                CHECK_NOT_EQUAL(ntree32::c_invalid_node, node);
+                ntree32::tree_del_node(&tree, node);
+                cleared++;
+            }
+
+            CHECK_EQUAL(4, cleared);
+            CHECK_EQUAL(ntree32::c_invalid_node, root);
+            CHECK_EQUAL((u32)0, tree.m_count);
 
             ntree32::tree_teardown(&tree);
         }

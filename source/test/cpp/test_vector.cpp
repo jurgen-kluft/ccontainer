@@ -16,33 +16,100 @@ UNITTEST_SUITE_BEGIN(vector_t)
 		UNITTEST_TEST(create_destroy)
 		{
 			vector_t v;
-			vector_setup(&v, sizeof(u32), 128, 512);
+			CHECK_TRUE(vector_setup(&v, sizeof(u32), 128, 32));
+			CHECK_EQUAL((u32)0, vector_get_size(&v));
+			CHECK_EQUAL((u32)128, vector_get_capacity(&v));
+			CHECK_EQUAL((byte*)nullptr, get_items_ptr(&v));
+			CHECK_EQUAL((byte const*)nullptr, get_items_ptr((vector_t const*)&v));
+			CHECK_EQUAL((byte*)nullptr, get_item_ptr(&v, 0));
+			CHECK_EQUAL((byte const*)nullptr, get_item_ptr((vector_t const*)&v, 0));
+			vector_destroy(&v);
 		}
 
-		UNITTEST_TEST(create_use_destroy)
+		UNITTEST_TEST(item_access_and_mutation)
 		{
-			vector_t darray;
-			vector_setup(&darray, sizeof(u32), 512, 512);
-			CHECK_EQUAL((u32)512, vector_get_capacity(&darray));
-			for (s32 i = 0; i < 512; i++)
-				push_item(&darray, (byte*)&i);
-			CHECK_EQUAL((u32)512, vector_get_size(&darray));
+			vector_t vector;
+			CHECK_TRUE(vector_setup(&vector, sizeof(u32), 8, 8));
+
+			u32 values[] = {10, 20, 30};
+			for (u32 i = 0; i < 3; ++i)
+				push_item(&vector, (byte*)&values[i]);
+
+			CHECK_EQUAL((u32)3, vector_get_size(&vector));
+			CHECK_NOT_EQUAL((byte*)nullptr, get_items_ptr(&vector));
+			CHECK_NOT_EQUAL((byte const*)nullptr, get_items_ptr((vector_t const*)&vector));
+			CHECK_EQUAL(values[0], *(u32*)get_item_ptr(&vector, 0));
+			CHECK_EQUAL(values[1], *(u32 const*)get_item_ptr((vector_t const*)&vector, 1));
+			CHECK_EQUAL((byte*)nullptr, get_item_ptr(&vector, 3));
+
+			u32 updated = 40;
+			CHECK_TRUE(set_item(&vector, 1, (byte const*)&updated));
+			CHECK_FALSE(set_item(&vector, 4, (byte const*)&updated));
+			CHECK_EQUAL(updated, *(u32*)get_item_ptr(&vector, 1));
+			CHECK_NOT_EQUAL(0, compare_items(&vector, 0, 1));
+			CHECK_EQUAL(0, compare_items(&vector, 1, 1));
+			CHECK_EQUAL(0, compare_items(&vector, 1, 9));
+
+			u32 inserted = 25;
+			insert_item(&vector, 1, (byte*)&inserted);
+			CHECK_EQUAL((u32)4, vector_get_size(&vector));
+			CHECK_EQUAL((u32)10, *(u32*)get_item_ptr(&vector, 0));
+			CHECK_EQUAL((u32)25, *(u32*)get_item_ptr(&vector, 1));
+			CHECK_EQUAL((u32)40, *(u32*)get_item_ptr(&vector, 2));
+
+			u32 appended = 50;
+			insert_item(&vector, vector_get_size(&vector), (byte*)&appended);
+			CHECK_EQUAL((u32)5, vector_get_size(&vector));
+			CHECK_EQUAL((u32)50, *(u32*)get_item_ptr(&vector, 4));
+
+			u32 popped = 0;
+			CHECK_TRUE(pop_item(&vector, (byte*)&popped));
+			CHECK_EQUAL((u32)50, popped);
+			CHECK_EQUAL((u32)4, vector_get_size(&vector));
+
+			remove_item(&vector, 1);
+			CHECK_EQUAL((u32)3, vector_get_size(&vector));
+			CHECK_EQUAL((u32)40, *(u32*)get_item_ptr(&vector, 1));
+
+			remove_item_swap(&vector, 0);
+			CHECK_EQUAL((u32)2, vector_get_size(&vector));
+			CHECK_EQUAL((u32)30, *(u32*)get_item_ptr(&vector, 0));
+			CHECK_EQUAL((u32)40, *(u32*)get_item_ptr(&vector, 1));
+
+			vector_set_size(&vector, 1);
+			CHECK_EQUAL((u32)1, vector_get_size(&vector));
+			vector_set_size(&vector, 99);
+			CHECK_EQUAL((u32)1, vector_get_size(&vector));
+
+			vector_destroy(&vector);
 		}
 
-		UNITTEST_TEST(create_setcap_use_destroy)
+		UNITTEST_TEST(capacity_and_empty_boundaries)
 		{
-			vector_t darray;
-			vector_setup(&darray, sizeof(u32), 512, 512);
-			CHECK_EQUAL((u32)512, vector_get_capacity(&darray));
+			vector_t vector;
+			CHECK_TRUE(vector_setup(&vector, sizeof(u32), 4, 0));
+			CHECK_TRUE(vector_ensure_capacity(&vector, 6));
+			CHECK_EQUAL((u32)6, vector_get_capacity(&vector));
+			CHECK_FALSE(vector_ensure_capacity(&vector, 0));
 
-			vector_ensure_capacity(&darray, 1024);
-			CHECK_EQUAL((u32)1024, vector_get_capacity(&darray));
-			CHECK_EQUAL((u32)0, vector_get_size(&darray));
+			u32 value = 7;
+			push_item(&vector, (byte*)&value);
+			CHECK_EQUAL((u32)1, vector_get_size(&vector));
 
-			for (s32 i = 0; i < 1024; i++)
-				push_item(&darray, (byte*)&i);
-			CHECK_EQUAL((u32)1024, vector_get_size(&darray));
+			remove_item(&vector, 8);
+			remove_item_swap(&vector, 8);
+			CHECK_EQUAL((u32)1, vector_get_size(&vector));
+
+			u32 popped = 0;
+			CHECK_TRUE(pop_item(&vector, (byte*)&popped));
+			CHECK_EQUAL(value, popped);
+			CHECK_FALSE(pop_item(&vector, (byte*)&popped));
+			CHECK_EQUAL((byte*)nullptr, get_items_ptr(&vector));
+
+			vector_destroy(&vector);
 		}
+
+		
 	}
 }
 UNITTEST_SUITE_END

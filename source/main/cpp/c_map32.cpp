@@ -12,8 +12,8 @@ namespace ncore
     static s8 s_compare(u32 _key, u32 _item, void const* user_data)
     {
         map32_t const* data = (map32_t const*)user_data;
-        byte const*    key  = get_item_const_ptr(&data->m_keys, _key);
-        byte const*    item = get_item_const_ptr(&data->m_keys, _item);
+        byte const*    key  = get_item_ptr(&data->m_keys, _key);
+        byte const*    item = get_item_ptr(&data->m_keys, _item);
         return g_memcmp(key, item, data->m_keys.m_sizeof);
     }
 
@@ -43,17 +43,18 @@ namespace ncore
     {
         // Ensure we have enough capacity for find and temp
         const u32 capacity = ntree32::tree_get_used_capacity(&map->m_tree);
-        vector_ensure_capacity(&map->m_keys, capacity + 3);
-        vector_ensure_capacity(&map->m_values, capacity + 3);
-        ntree32::tree_ensure_capacity(&map->m_tree, capacity + 3);
+        const u32 required_capacity = capacity + 3;  // find slot, temp slot, and new node slot
 
-        vector_set_size(&map->m_keys, capacity + 2);
-        vector_set_size(&map->m_values, capacity + 2);
+        vector_ensure_capacity(&map->m_keys, required_capacity);
+        vector_ensure_capacity(&map->m_values, required_capacity);
+        ntree32::tree_ensure_capacity(&map->m_tree, required_capacity);
+        vector_set_size(&map->m_keys, required_capacity);
+        vector_set_size(&map->m_values, required_capacity);
 
         ntree32::index_t find_slot = capacity;
         ntree32::node_t  temp_slot = capacity + 1;
 
-        byte* keys = get_item_ptr(&map->m_keys, capacity);
+        byte* keys = get_item_ptr(&map->m_keys, find_slot);
         g_memcpy(keys, key, map->m_keys.m_sizeof);
 
         ntree32::node_t inserted;
@@ -73,13 +74,13 @@ namespace ncore
         if (map->m_root == ntree32::c_invalid_node)
             return false;
 
-        const u32 capacity = ntree32::tree_get_capacity(&map->m_tree);
-
-        byte* keys = get_item_ptr(&map->m_keys, capacity);
-        g_memcpy(keys, key, map->m_keys.m_sizeof);
+        const u32 capacity = ntree32::tree_get_used_capacity(&map->m_tree);
 
         ntree32::index_t find_slot = capacity;
         ntree32::node_t  temp_slot = capacity + 1;
+
+        byte* keys = get_item_ptr(&map->m_keys, find_slot);
+        g_memcpy(keys, key, map->m_keys.m_sizeof);
 
         ntree32::node_t removed;
         if (ntree32::tree_remove(&map->m_tree, map->m_root, temp_slot, find_slot, map->m_comparer, map, removed))
@@ -99,12 +100,11 @@ namespace ncore
         if (map->m_root == ntree32::c_invalid_node)
             return false;
 
-        const u32 capacity = ntree32::tree_get_capacity(&map->m_tree);
-
-        byte* keys = get_item_ptr(&map->m_keys, capacity);
-        g_memcpy(keys, key, map->m_keys.m_sizeof);
-
+        const u32        capacity  = ntree32::tree_get_used_capacity(&map->m_tree);
         ntree32::index_t find_slot = capacity;
+
+        byte* keys = get_item_ptr(&map->m_keys, find_slot);
+        g_memcpy(keys, key, map->m_keys.m_sizeof);
 
         ntree32::node_t found;
         if (ntree32::tree_find(&map->m_tree, map->m_root, find_slot, map->m_comparer, map, found))

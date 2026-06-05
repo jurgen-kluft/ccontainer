@@ -21,25 +21,25 @@ namespace ncore
     void vector_destroy(vector_t* vector);
 
     inline u32 vector_get_size(vector_t* vector) { return vector->m_count; }
-    void vector_set_size(vector_t* vector, u32 new_size); 
+    void       vector_set_size(vector_t* vector, u32 new_size);
 
-    bool vector_ensure_capacity(vector_t* vector, u32 new_capacity);  // unit = number of items
-    u32  vector_get_capacity(vector_t* vector);
+    bool       vector_ensure_capacity(vector_t* vector, u32 new_capacity);  // unit = number of items
+    inline u32 vector_get_capacity(vector_t* vector) { return vector->m_capacity; }
 
-    bool push_item(vector_t* vector, byte* item);
-    bool insert_item(vector_t* vector, u32 index, byte* item);
+    void push_item(vector_t* vector, byte const* item);
+    void insert_item(vector_t* vector, u32 index, byte const* item);
 
     bool set_item(vector_t* vector, u32 index, const byte* item);
     bool pop_item(vector_t* vector, byte* out_item);
     void remove_item(vector_t* vector, u32 index);
-    void swap_remove(vector_t* vector, u32 index);
+    void remove_item_swap(vector_t* vector, u32 index);
 
     byte*       get_item_ptr(vector_t* vector, u32 index);
-    byte const* get_item_const_ptr(vector_t const* vector, u32 index);
+    byte const* get_item_ptr(vector_t const* vector, u32 index);
     byte*       get_items_ptr(vector_t* vector);
-    byte const* get_items_const_ptr(vector_t const* vector);
+    byte const* get_items_ptr(vector_t const* vector);
 
-    s32 compare_items(vector_t* vector, u32 lhs_index, u32 rhs_index);
+    s32 compare_items(vector_t const* vector, u32 lhs_index, u32 rhs_index);
 
 };  // namespace ncore
 

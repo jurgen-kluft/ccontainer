@@ -34,24 +34,21 @@ namespace ncore
 
     bool vector_ensure_capacity(vector_t* vector, u32 new_capacity)
     {
-        if (new_capacity == 0 || new_capacity > (D_U32_MAX / vector->m_sizeof))
+        if (new_capacity == 0 || new_capacity > narena::reserved_size(vector->m_arena) / vector->m_sizeof)
             return false;  // new capacity is too large
 
         vector->m_capacity = new_capacity;
         return narena::commit(vector->m_arena, (int_t)new_capacity * vector->m_sizeof);
     }
 
-    u32 vector_get_capacity(vector_t* vector) { return vector->m_capacity; }
-
-    bool push_item(vector_t* vector, byte* item)
+    void push_item(vector_t* vector, byte const* item)
     {
         byte* dst = (byte*)narena::alloc(vector->m_arena, vector->m_sizeof);
         g_memcpy(dst, item, vector->m_sizeof);
         vector->m_count += 1;
-        return true;
     }
 
-    bool insert_item(vector_t* vector, u32 index, byte* item)
+    void insert_item(vector_t* vector, u32 index, byte const* item)
     {
         // insert does need to alloc a new slot
         narena::alloc(vector->m_arena, vector->m_sizeof);
@@ -62,7 +59,7 @@ namespace ncore
             byte* dst = (byte*)narena::base_ptr(vector->m_arena) + (index * vector->m_sizeof);
             g_memcpy(dst, item, vector->m_sizeof);
             vector->m_count += 1;
-            return true;
+            return;
         }
 
         // if we are inserting in the middle, we need to move the existing items after the index
@@ -73,7 +70,6 @@ namespace ncore
         g_memmove(dst + vector->m_sizeof, src, move_size);
         g_memcpy(dst, item, vector->m_sizeof);
         vector->m_count += 1;
-        return true;
     }
 
     bool set_item(vector_t* vector, u32 index, const byte* item)
@@ -118,7 +114,7 @@ namespace ncore
         vector->m_count -= 1;
     }
 
-    void swap_remove(vector_t* vector, u32 index)
+    void remove_item_swap(vector_t* vector, u32 index)
     {
         if (index >= vector->m_count)
             return;  // index out of bounds
@@ -140,42 +136,37 @@ namespace ncore
     byte* get_item_ptr(vector_t* vector, u32 index)
     {
         if (index >= vector->m_count)
-            return nullptr;  // index out of bounds
-
+            return nullptr;
         return (byte*)narena::base_ptr(vector->m_arena) + (index * vector->m_sizeof);
     }
 
-    byte const* get_item_const_ptr(vector_t const* vector, u32 index)
+    byte const* get_item_ptr(vector_t const* vector, u32 index)
     {
         if (index >= vector->m_count)
-            return nullptr;  // index out of bounds
-
+            return nullptr;
         return (byte const*)narena::base_ptr(vector->m_arena) + (index * vector->m_sizeof);
     }
 
     byte* get_items_ptr(vector_t* vector)
     {
         if (vector->m_count == 0)
-            return nullptr;  // no items in the vector
-
+            return nullptr;
         return (byte*)narena::base_ptr(vector->m_arena);
     }
 
-    byte const* get_items_const_ptr(vector_t const* vector)
+    byte const* get_items_ptr(vector_t const* vector)
     {
         if (vector->m_count == 0)
-            return nullptr;  // no items in the vector
-
+            return nullptr;
         return (byte const*)narena::base_ptr(vector->m_arena);
     }
 
-    s32 compare_items(vector_t* vector, u32 lhs_index, u32 rhs_index)
+    s32 compare_items(vector_t const* vector, u32 lhs_index, u32 rhs_index)
     {
         if (lhs_index >= vector->m_count || rhs_index >= vector->m_count)
-            return 0;  // index out of bounds, consider them equal
-
-        byte* lhs = (byte*)narena::base_ptr(vector->m_arena) + (lhs_index * vector->m_sizeof);
-        byte* rhs = (byte*)narena::base_ptr(vector->m_arena) + (rhs_index * vector->m_sizeof);
+            return 0;
+        byte const* lhs = (byte const*)narena::base_ptr(vector->m_arena) + (lhs_index * vector->m_sizeof);
+        byte const* rhs = (byte const*)narena::base_ptr(vector->m_arena) + (rhs_index * vector->m_sizeof);
         return g_memcmp(lhs, rhs, vector->m_sizeof);
     }
 
