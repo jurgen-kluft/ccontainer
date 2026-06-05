@@ -7,14 +7,14 @@
 
 namespace ncore
 {
-    bool vector_setup(vector_t* vector, u32 item_size, u32 num_items_reserved, u32 num_items_committed)
+    bool vector_setup(vector_t* vector, u32 item_size, u32 max_probable_items, u32 initial_committed_items)
     {
         ASSERT(item_size > 0 && item_size <= 65536);  // item size should be reasonable
-        ASSERT(num_items_reserved > 0);               // must reserve at least one item
+        ASSERT(max_probable_items > 0);               // must reserve at least one item
 
         vector->m_count  = 0;
         vector->m_sizeof = item_size;
-        vector->m_arena  = narena::new_arena((int_t)item_size * num_items_reserved, (int_t)item_size * num_items_committed);
+        vector->m_arena  = narena::new_arena((int_t)item_size * max_probable_items, (int_t)item_size * initial_committed_items);
         return vector->m_arena != nullptr;
     }
 
@@ -41,27 +41,24 @@ namespace ncore
         }
 
         vector->m_count = new_size;
-        narena::restore_address(vector->m_arena, (void*)((uint_t)new_size * vector->m_sizeof));
+        void* new_address = narena::base_ptr(vector->m_arena) + (new_size * vector->m_sizeof);
+        narena::restore_address(vector->m_arena, new_address);
         return true;
     }
 
-    bool vector_ensure_capacity(vector_t* vector, u32 new_capacity)
+    bool vector_set_capacity(vector_t* vector, u32 new_capacity)
     {
         const u32 max_capacity = (u32)(narena::reserved_size(vector->m_arena) / vector->m_sizeof);
         if (new_capacity > max_capacity)
             return false;  // new capacity is too large
 
-        if (new_capacity < vector->m_count)
+        vector->m_count = new_capacity;
+        if (narena::recommit(vector->m_arena, (int_t)new_capacity * vector->m_sizeof))
         {
-            vector->m_count = new_capacity;
-            narena::restore_address(vector->m_arena, (void*)((uint_t)new_capacity * vector->m_sizeof));
-
-            return narena::recommit(vector->m_arena, (int_t)new_capacity * vector->m_sizeof);
+            narena::restore_address(vector->m_arena, (void*)(narena::base_ptr(vector->m_arena) + (uint_t)new_capacity * vector->m_sizeof));
+            return true;
         }
-        else
-        {
-            return narena::commit(vector->m_arena, (int_t)new_capacity * vector->m_sizeof);
-        }
+        return false;
     }
 
     u32 vector_get_capacity(vector_t* vector) { return (u32)(narena::committed_size(vector->m_arena) / vector->m_sizeof); }

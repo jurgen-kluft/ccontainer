@@ -45,9 +45,9 @@ namespace ncore
         const u32 capacity = ntree32::tree_get_used_capacity(&map->m_tree);
         const u32 required_capacity = capacity + 3;  // find slot, temp slot, and new node slot
 
-        vector_ensure_capacity(&map->m_keys, required_capacity);
-        vector_ensure_capacity(&map->m_values, required_capacity);
-        ntree32::tree_ensure_capacity(&map->m_tree, required_capacity);
+        vector_set_capacity(&map->m_keys, required_capacity);
+        vector_set_capacity(&map->m_values, required_capacity);
+        ntree32::tree_set_capacity(&map->m_tree, required_capacity);
         vector_set_size(&map->m_keys, required_capacity);
         vector_set_size(&map->m_values, required_capacity);
 
@@ -82,7 +82,7 @@ namespace ncore
         byte* keys = vector_item_ptr(&map->m_keys, find_slot);
         g_memcpy(keys, key, map->m_keys.m_sizeof);
 
-        ntree32::node_t removed;
+        ntree32::node_t removed = ntree32::c_invalid_node;
         if (ntree32::tree_remove(&map->m_tree, map->m_root, temp_slot, find_slot, map->m_comparer, map, removed))
         {
             if (removed != ntree32::c_invalid_node)

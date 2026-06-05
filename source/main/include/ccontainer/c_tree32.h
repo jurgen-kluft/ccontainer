@@ -73,7 +73,7 @@ namespace ncore
         void tree_teardown(tree_t* tree);
 
         u32  tree_get_capacity(tree_t const* tree);
-        void tree_ensure_capacity(tree_t* tree, u32 capacity);
+        void tree_set_capacity(tree_t* tree, u32 capacity);
         u32  tree_get_used_capacity(tree_t const* tree);
 
         bool tree_clear(tree_t* tree, node_t& root, node_t& n);  // Repeatedly call 'clear' until true is returned

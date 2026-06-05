@@ -125,7 +125,7 @@ UNITTEST_SUITE_BEGIN(tree32)
             CHECK_EQUAL((u32)0, ntree32::tree_get_capacity(&tree));
             CHECK_EQUAL((u32)0, ntree32::tree_get_used_capacity(&tree));
 
-            ntree32::tree_ensure_capacity(&tree, 4);
+            ntree32::tree_set_capacity(&tree, 4);
             CHECK_GE(ntree32::tree_get_capacity(&tree),(u32)4);
 
             ntree32::node_t root = ntree32::tree_new_node(&tree);

@@ -645,7 +645,7 @@ namespace ncore
 
         u32 tree_get_capacity(tree_t const* tree) { return (u32)(narena::committed_size(tree->m_nodes) / sizeof(nnode_t)); }
 
-        void tree_ensure_capacity(tree_t* tree, u32 capacity)
+        void tree_set_capacity(tree_t* tree, u32 capacity)
         {
             if ((capacity * sizeof(nnode_t)) > narena::committed_size(tree->m_nodes))
             {

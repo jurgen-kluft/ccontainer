@@ -16,13 +16,14 @@ namespace ncore
         arena_t* m_arena;
     };
 
-    bool vector_setup(vector_t* vector, u32 item_size, u32 num_items_reserved, u32 num_items_committed = 0);
+    // Note: Since we are allocating memory in pages, the actual max items will likely be higher than max probable items!
+    bool vector_setup(vector_t* vector, u32 item_size, u32 max_probable_items, u32 initial_committed_items = 0);
     void vector_destroy(vector_t* vector);
 
     inline u32 vector_get_size(vector_t* vector) { return vector->m_count; }
     bool       vector_set_size(vector_t* vector, u32 new_size);
 
-    bool vector_ensure_capacity(vector_t* vector, u32 new_capacity);  // unit = number of items
+    bool vector_set_capacity(vector_t* vector, u32 new_capacity);  // unit = number of items
     u32  vector_get_capacity(vector_t* vector);
 
     inline bool vector_is_empty(vector_t* vector) { return vector->m_count == 0; }
