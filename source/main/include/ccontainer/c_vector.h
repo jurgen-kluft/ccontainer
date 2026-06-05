@@ -13,7 +13,6 @@ namespace ncore
     {
         u32      m_count;
         u32      m_sizeof;
-        u32      m_capacity;
         arena_t* m_arena;
     };
 
@@ -21,13 +20,13 @@ namespace ncore
     void vector_destroy(vector_t* vector);
 
     inline u32 vector_get_size(vector_t* vector) { return vector->m_count; }
-    void       vector_set_size(vector_t* vector, u32 new_size);
+    bool       vector_set_size(vector_t* vector, u32 new_size);
 
-    bool       vector_ensure_capacity(vector_t* vector, u32 new_capacity);  // unit = number of items
-    inline u32 vector_get_capacity(vector_t* vector) { return vector->m_capacity; }
+    bool vector_ensure_capacity(vector_t* vector, u32 new_capacity);  // unit = number of items
+    u32  vector_get_capacity(vector_t* vector);
 
-    bool vector_is_empty(vector_t* vector) { return vector->m_count == 0; }
-    void vector_clear(vector_t* vector) { vector->m_count = 0; }
+    inline bool vector_is_empty(vector_t* vector) { return vector->m_count == 0; }
+    inline void vector_clear(vector_t* vector) { vector->m_count = 0; }
 
     void vector_push(vector_t* vector, byte const* item);
     void vector_insert(vector_t* vector, u32 index, byte const* item);

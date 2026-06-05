@@ -9,8 +9,8 @@ using namespace ncore;
 static s8 s_compare_s32_keys(u32 key_index, u32 item_index, void const* user_data)
 {
     map32_t const* map = (map32_t const*)user_data;
-    s32 const* key = (s32 const*)get_item_ptr(&map->m_keys, key_index);
-    s32 const* item = (s32 const*)get_item_ptr(&map->m_keys, item_index);
+    s32 const* key = (s32 const*)vector_item_ptr(&map->m_keys, key_index);
+    s32 const* item = (s32 const*)vector_item_ptr(&map->m_keys, item_index);
     if (*key < *item)
         return -1;
     if (*key > *item)

@@ -12,8 +12,8 @@ namespace ncore
     static s8 s_compare(u32 _key, u32 _item, void const* user_data)
     {
         map32_t const* data = (map32_t const*)user_data;
-        byte const*    key  = get_item_ptr(&data->m_keys, _key);
-        byte const*    item = get_item_ptr(&data->m_keys, _item);
+        byte const*    key  = vector_item_ptr(&data->m_keys, _key);
+        byte const*    item = vector_item_ptr(&data->m_keys, _item);
         return g_memcmp(key, item, data->m_keys.m_sizeof);
     }
 
@@ -54,14 +54,14 @@ namespace ncore
         ntree32::index_t find_slot = capacity;
         ntree32::node_t  temp_slot = capacity + 1;
 
-        byte* keys = get_item_ptr(&map->m_keys, find_slot);
+        byte* keys = vector_item_ptr(&map->m_keys, find_slot);
         g_memcpy(keys, key, map->m_keys.m_sizeof);
 
         ntree32::node_t inserted;
         if (ntree32::tree_insert(&map->m_tree, map->m_root, temp_slot, find_slot, map->m_comparer, map, inserted))
         {
-            byte* key_inserted   = get_item_ptr(&map->m_keys, inserted);
-            byte* value_inserted = get_item_ptr(&map->m_values, inserted);
+            byte* key_inserted   = vector_item_ptr(&map->m_keys, inserted);
+            byte* value_inserted = vector_item_ptr(&map->m_values, inserted);
             g_memcpy(key_inserted, key, map->m_keys.m_sizeof);
             g_memcpy(value_inserted, value, map->m_values.m_sizeof);
             return true;
@@ -79,7 +79,7 @@ namespace ncore
         ntree32::index_t find_slot = capacity;
         ntree32::node_t  temp_slot = capacity + 1;
 
-        byte* keys = get_item_ptr(&map->m_keys, find_slot);
+        byte* keys = vector_item_ptr(&map->m_keys, find_slot);
         g_memcpy(keys, key, map->m_keys.m_sizeof);
 
         ntree32::node_t removed;
@@ -103,7 +103,7 @@ namespace ncore
         const u32        capacity  = ntree32::tree_get_used_capacity(&map->m_tree);
         ntree32::index_t find_slot = capacity;
 
-        byte* keys = get_item_ptr(&map->m_keys, find_slot);
+        byte* keys = vector_item_ptr(&map->m_keys, find_slot);
         g_memcpy(keys, key, map->m_keys.m_sizeof);
 
         ntree32::node_t found;
@@ -111,7 +111,7 @@ namespace ncore
         {
             if (found != ntree32::c_invalid_node)
             {
-                byte* value_found = get_item_ptr(&map->m_values, found);
+                byte* value_found = vector_item_ptr(&map->m_values, found);
                 g_memcpy(value, value_found, map->m_values.m_sizeof);
                 return true;
             }

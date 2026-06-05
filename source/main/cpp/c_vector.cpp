@@ -12,10 +12,9 @@ namespace ncore
         ASSERT(item_size > 0 && item_size <= 65536);  // item size should be reasonable
         ASSERT(num_items_reserved > 0);               // must reserve at least one item
 
-        vector->m_count    = 0;
-        vector->m_sizeof   = item_size;
-        vector->m_capacity = num_items_reserved;
-        vector->m_arena    = narena::new_arena((int_t)item_size * num_items_reserved, (int_t)item_size * num_items_committed);
+        vector->m_count  = 0;
+        vector->m_sizeof = item_size;
+        vector->m_arena  = narena::new_arena((int_t)item_size * num_items_reserved, (int_t)item_size * num_items_committed);
         return vector->m_arena != nullptr;
     }
 
@@ -25,25 +24,47 @@ namespace ncore
             narena::destroy(vector->m_arena);
     }
 
-    void vector_set_size(vector_t* vector, u32 new_size)
+    bool vector_set_size(vector_t* vector, u32 new_size)
     {
-        if (new_size > vector->m_capacity)
-            return;  // new size is too large
-        vector->m_count = new_size;
+        if (new_size > vector->m_count)
+        {
+            const u32 max_capacity = (u32)(narena::reserved_size(vector->m_arena) / vector->m_sizeof);
+            if (new_size > max_capacity)
+                return false;  // new capacity is too large
 
-        // TODO we need to set 'pos' in the arena to the new size
+            const u32 capacity = vector_get_capacity(vector);
+            if (new_size > capacity)
+            {
+                if (!narena::commit(vector->m_arena, (int_t)new_size * vector->m_sizeof))
+                    return false;
+            }
+        }
+
+        vector->m_count = new_size;
+        narena::restore_address(vector->m_arena, (void*)((uint_t)new_size * vector->m_sizeof));
+        return true;
     }
 
     bool vector_ensure_capacity(vector_t* vector, u32 new_capacity)
     {
-        if (new_capacity == 0 || new_capacity > narena::reserved_size(vector->m_arena) / vector->m_sizeof)
+        const u32 max_capacity = (u32)(narena::reserved_size(vector->m_arena) / vector->m_sizeof);
+        if (new_capacity > max_capacity)
             return false;  // new capacity is too large
 
-        // TODO if we are setting a capacity that is < size then we need to handle this
+        if (new_capacity < vector->m_count)
+        {
+            vector->m_count = new_capacity;
+            narena::restore_address(vector->m_arena, (void*)((uint_t)new_capacity * vector->m_sizeof));
 
-        vector->m_capacity = new_capacity;
-        return narena::commit(vector->m_arena, (int_t)new_capacity * vector->m_sizeof);
+            return narena::recommit(vector->m_arena, (int_t)new_capacity * vector->m_sizeof);
+        }
+        else
+        {
+            return narena::commit(vector->m_arena, (int_t)new_capacity * vector->m_sizeof);
+        }
     }
+
+    u32 vector_get_capacity(vector_t* vector) { return (u32)(narena::committed_size(vector->m_arena) / vector->m_sizeof); }
 
     void vector_push(vector_t* vector, byte const* item)
     {
@@ -137,14 +158,14 @@ namespace ncore
         vector->m_count -= 1;
     }
 
-    byte*       vector_begin_ptr(vector_t* vector)
+    byte* vector_begin_ptr(vector_t* vector)
     {
         if (vector->m_count == 0)
             return nullptr;
         return (byte*)narena::base_ptr(vector->m_arena);
     }
-    
-    byte*       vector_end_ptr(vector_t* vector)
+
+    byte* vector_end_ptr(vector_t* vector)
     {
         if (vector->m_count == 0)
             return nullptr;
@@ -169,14 +190,14 @@ namespace ncore
     {
         if (index >= vector->m_count)
             return nullptr;
-        return (byte*)narena::base_ptr(vector->m_arena) + (index * vector->m_sizeof);
+        return (byte*)narena::base_ptr(vector->m_arena) + ((u32)index * vector->m_sizeof);
     }
 
     byte const* vector_item_ptr(vector_t const* vector, u32 index)
     {
         if (index >= vector->m_count)
             return nullptr;
-        return (byte const*)narena::base_ptr(vector->m_arena) + (index * vector->m_sizeof);
+        return (byte const*)narena::base_ptr(vector->m_arena) + ((u32)index * vector->m_sizeof);
     }
 
     byte* vector_items_ptr(vector_t* vector)

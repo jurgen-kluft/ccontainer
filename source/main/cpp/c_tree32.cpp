@@ -640,10 +640,10 @@ namespace ncore
 
         u32 tree_get_used_capacity(tree_t const* tree)
         {
-            return narena::current_pos(tree->m_nodes) / sizeof(nnode_t);
+            return (u32)(narena::current_pos(tree->m_nodes) / sizeof(nnode_t));
         }
 
-        u32 tree_get_capacity(tree_t const* tree) { return narena::committed_size(tree->m_nodes) / sizeof(nnode_t); }
+        u32 tree_get_capacity(tree_t const* tree) { return (u32)(narena::committed_size(tree->m_nodes) / sizeof(nnode_t)); }
 
         void tree_ensure_capacity(tree_t* tree, u32 capacity)
         {
